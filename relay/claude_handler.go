@@ -110,6 +110,10 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 	if info.ChannelSetting.SystemPrompt != "" {
 		if request.System == nil {
 			request.SetStringSystem(info.ChannelSetting.SystemPrompt)
+		} else if info.ChannelSetting.SystemPromptOverwrite {
+			// 覆写提示词：用渠道提示词整体替换用户 system
+			common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
+			request.SetStringSystem(info.ChannelSetting.SystemPrompt)
 		} else if info.ChannelSetting.SystemPromptOverride {
 			common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
 			if request.IsStringSystem() {

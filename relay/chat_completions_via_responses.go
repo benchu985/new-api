@@ -41,14 +41,34 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 			Role:    systemRole,
 			Content: info.ChannelSetting.SystemPrompt,
 		}
+		// 提示词添加最前：插入到消息列表首位；未开启时维持原有行为（同样置于首位）
 		request.Messages = append([]dto.Message{systemMessage}, request.Messages...)
 		return
 	}
 
-	if !info.ChannelSetting.SystemPromptOverride {
+	if info.ChannelSetting.SystemPromptOverwrite {
+		// 覆写提示词：用渠道提示词整体替换用户 system 消息内容
+		common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
+		for i, message := range request.Messages {
+			if message.Role != systemRole {
+				continue
+			}
+			request.Messages[i].SetStringContent(info.ChannelSetting.SystemPrompt)
+			if info.ChannelSetting.SystemPromptPrepend && i != 0 {
+				// 提示词添加最前：将替换后的 system 移到消息列表首位
+				msg := request.Messages[i]
+				request.Messages = append(request.Messages[:i], request.Messages[i+1:]...)
+				request.Messages = append([]dto.Message{msg}, request.Messages...)
+			}
+			return
+		}
+	}
+
+	if !info.ChannelSetting.SystemPromptOverride && !info.ChannelSetting.SystemPromptPrepend {
 		return
 	}
 
+	// 拼接前置：渠道提示词 + "\n" + 用户原有 system（新开关 SystemPromptPrepend 与旧开关 SystemPromptOverride 均触发）
 	common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
 	for i, message := range request.Messages {
 		if message.Role != systemRole {
@@ -56,16 +76,22 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 		}
 		if message.IsStringContent() {
 			request.Messages[i].SetStringContent(info.ChannelSetting.SystemPrompt + "\n" + message.StringContent())
-			return
+		} else {
+			contents := message.ParseContent()
+			contents = append([]dto.MediaContent{
+				{
+					Type: dto.ContentTypeText,
+					Text: info.ChannelSetting.SystemPrompt,
+				},
+			}, contents...)
+			request.Messages[i].Content = contents
 		}
-		contents := message.ParseContent()
-		contents = append([]dto.MediaContent{
-			{
-				Type: dto.ContentTypeText,
-				Text: info.ChannelSetting.SystemPrompt,
-			},
-		}, contents...)
-		request.Messages[i].Content = contents
+		if info.ChannelSetting.SystemPromptPrepend && i != 0 {
+			// 提示词添加最前：将拼接后的 system 移到消息列表首位
+			msg := request.Messages[i]
+			request.Messages = append(request.Messages[:i], request.Messages[i+1:]...)
+			request.Messages = append([]dto.Message{msg}, request.Messages...)
+		}
 		return
 	}
 }

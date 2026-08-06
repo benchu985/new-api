@@ -341,6 +341,8 @@ function hasAdvancedSettingsValues(values: ChannelFormValues): boolean {
     values.thinking_to_content ||
     values.pass_through_body_enabled ||
     values.system_prompt_override ||
+    values.system_prompt_overwrite ||
+    values.system_prompt_prepend ||
     (values.http_protocol && values.http_protocol !== 'auto') ||
     (values.http2_connection_shards != null &&
       values.http2_connection_shards > 1) ||
@@ -754,6 +756,8 @@ export function ChannelMutateDrawer({
   const currentHttp2ConnectionShards = form.watch('http2_connection_shards')
   const currentSystemPrompt = form.watch('system_prompt')
   const currentSystemPromptOverride = form.watch('system_prompt_override')
+  const currentSystemPromptOverwrite = form.watch('system_prompt_overwrite')
+  const currentSystemPromptPrepend = form.watch('system_prompt_prepend')
   const currentAllowServiceTier = form.watch('allow_service_tier')
   const currentDisableStore = form.watch('disable_store')
   const currentAllowSafetyIdentifier = form.watch('allow_safety_identifier')
@@ -1022,6 +1026,8 @@ export function ChannelMutateDrawer({
     currentProxy?.trim() ||
     currentSystemPrompt?.trim() ||
     currentSystemPromptOverride ||
+    currentSystemPromptOverwrite ||
+    currentSystemPromptPrepend ||
     (currentHttpProtocol && currentHttpProtocol !== 'auto') ||
     (currentHttp2ConnectionShards != null && currentHttp2ConnectionShards > 1)
   )
@@ -4354,6 +4360,56 @@ export function ChannelMutateDrawer({
                                     <FormDescription>
                                       {t(
                                         'Concatenate channel system prompt with user&apos;s prompt'
+                                      )}
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name='system_prompt_overwrite'
+                              render={({ field }) => (
+                                <FormItem className='flex items-center justify-between'>
+                                  <div className='space-y-0.5'>
+                                    <FormLabel>
+                                      {t('Overwrite System Prompt')}
+                                    </FormLabel>
+                                    <FormDescription>
+                                      {t(
+                                        'Replace user&apos;s system prompt with channel system prompt'
+                                      )}
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name='system_prompt_prepend'
+                              render={({ field }) => (
+                                <FormItem className='flex items-center justify-between'>
+                                  <div className='space-y-0.5'>
+                                    <FormLabel>
+                                      {t('Prepend System Prompt')}
+                                    </FormLabel>
+                                    <FormDescription>
+                                      {t(
+                                        'Force channel system prompt as the first message'
                                       )}
                                     </FormDescription>
                                   </div>

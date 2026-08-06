@@ -86,6 +86,8 @@ export interface ChannelSettings {
   pass_through_body_enabled?: boolean
   system_prompt?: string
   system_prompt_override?: boolean
+  system_prompt_overwrite?: boolean
+  system_prompt_prepend?: boolean
   http_protocol?: 'auto' | 'http1' | string
   http2_connection_shards?: number
 }

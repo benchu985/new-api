@@ -17,6 +17,8 @@ type ChannelSettings struct {
 	PassThroughBodyEnabled bool   `json:"pass_through_body_enabled,omitempty"`
 	SystemPrompt           string `json:"system_prompt,omitempty"`
 	SystemPromptOverride   bool   `json:"system_prompt_override,omitempty"`
+	SystemPromptOverwrite  bool   `json:"system_prompt_overwrite,omitempty"` // 覆写提示词：用渠道提示词整体替换用户的 system
+	SystemPromptPrepend    bool   `json:"system_prompt_prepend,omitempty"`   // 提示词添加最前：强制将渠道提示词置于消息列表首位
 	// HTTPProtocol controls outbound HTTP version negotiation for this channel.
 	// Accepted values: "", "auto" (default), "http1".
 	HTTPProtocol string `json:"http_protocol,omitempty"`

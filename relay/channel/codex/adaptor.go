@@ -64,6 +64,13 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 			} else {
 				return nil, err
 			}
+		} else if info.ChannelSetting.SystemPromptOverwrite {
+			// 覆写提示词：用渠道提示词整体替换用户的 instructions
+			if b, err := common.Marshal(systemPrompt); err == nil {
+				request.Instructions = b
+			} else {
+				return nil, err
+			}
 		} else if info.ChannelSetting.SystemPromptOverride {
 			var existing string
 			if err := common.Unmarshal(request.Instructions, &existing); err == nil {
