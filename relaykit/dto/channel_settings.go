@@ -11,20 +11,30 @@ import (
 )
 
 type ChannelSettings struct {
-	ForceFormat            bool   `json:"force_format,omitempty"`
-	ThinkingToContent      bool   `json:"thinking_to_content,omitempty"`
-	Proxy                  string `json:"proxy"`
-	PassThroughBodyEnabled bool   `json:"pass_through_body_enabled,omitempty"`
-	SystemPrompt           string `json:"system_prompt,omitempty"`
-	SystemPromptOverride   bool   `json:"system_prompt_override,omitempty"`
-	SystemPromptOverwrite  bool   `json:"system_prompt_overwrite,omitempty"` // 覆写提示词：用渠道提示词整体替换用户的 system
-	SystemPromptPrepend    bool   `json:"system_prompt_prepend,omitempty"`   // 提示词添加最前：强制将渠道提示词置于消息列表首位
+	ForceFormat            bool           `json:"force_format,omitempty"`
+	ThinkingToContent      bool           `json:"thinking_to_content,omitempty"`
+	Proxy                  string         `json:"proxy"`
+	PassThroughBodyEnabled bool           `json:"pass_through_body_enabled,omitempty"`
+	SystemPrompt           string         `json:"system_prompt,omitempty"`
+	SystemPromptByKey      map[int]string `json:"system_prompt_by_key,omitempty"` // key index -> system prompt
+	SystemPromptOverride   bool           `json:"system_prompt_override,omitempty"`
+	SystemPromptOverwrite  bool           `json:"system_prompt_overwrite,omitempty"` // 覆写提示词：用渠道提示词整体替换用户的 system
+	SystemPromptPrepend    bool           `json:"system_prompt_prepend,omitempty"`   // 提示词添加最前：强制将渠道提示词置于消息列表首位
 	// HTTPProtocol controls outbound HTTP version negotiation for this channel.
 	// Accepted values: "", "auto" (default), "http1".
 	HTTPProtocol string `json:"http_protocol,omitempty"`
 	// HTTP2ConnectionShards spreads HTTP/2 traffic across N independent transports
 	// (1-8). Zero/unset means 1. Ignored when HTTPProtocol is "http1".
 	HTTP2ConnectionShards int `json:"http2_connection_shards,omitempty"`
+}
+
+// GetSystemPrompt returns the prompt configured for a selected multi-key index,
+// falling back to the channel-wide prompt when no per-key value is configured.
+func (s ChannelSettings) GetSystemPrompt(keyIndex int) string {
+	if prompt, ok := s.SystemPromptByKey[keyIndex]; ok && strings.TrimSpace(prompt) != "" {
+		return prompt
+	}
+	return s.SystemPrompt
 }
 
 const (

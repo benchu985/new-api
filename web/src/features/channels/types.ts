@@ -85,6 +85,7 @@ export interface ChannelSettings {
   proxy?: string
   pass_through_body_enabled?: boolean
   system_prompt?: string
+  system_prompt_by_key?: string
   system_prompt_override?: boolean
   system_prompt_overwrite?: boolean
   system_prompt_prepend?: boolean

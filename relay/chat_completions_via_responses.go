@@ -23,7 +23,8 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 	if info == nil || request == nil {
 		return
 	}
-	if info.ChannelSetting.SystemPrompt == "" {
+	systemPrompt := info.ChannelSetting.GetSystemPrompt(info.ChannelMultiKeyIndex)
+	if systemPrompt == "" {
 		return
 	}
 
@@ -39,7 +40,7 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 	if !containSystemPrompt {
 		systemMessage := dto.Message{
 			Role:    systemRole,
-			Content: info.ChannelSetting.SystemPrompt,
+			Content: systemPrompt,
 		}
 		// 提示词添加最前：插入到消息列表首位；未开启时维持原有行为（同样置于首位）
 		request.Messages = append([]dto.Message{systemMessage}, request.Messages...)
@@ -53,7 +54,7 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 			if message.Role != systemRole {
 				continue
 			}
-			request.Messages[i].SetStringContent(info.ChannelSetting.SystemPrompt)
+			request.Messages[i].SetStringContent(systemPrompt)
 			if info.ChannelSetting.SystemPromptPrepend && i != 0 {
 				// 提示词添加最前：将替换后的 system 移到消息列表首位
 				msg := request.Messages[i]
@@ -75,13 +76,13 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 			continue
 		}
 		if message.IsStringContent() {
-			request.Messages[i].SetStringContent(info.ChannelSetting.SystemPrompt + "\n" + message.StringContent())
+			request.Messages[i].SetStringContent(systemPrompt + "\n" + message.StringContent())
 		} else {
 			contents := message.ParseContent()
 			contents = append([]dto.MediaContent{
 				{
 					Type: dto.ContentTypeText,
-					Text: info.ChannelSetting.SystemPrompt,
+					Text: systemPrompt,
 				},
 			}, contents...)
 			request.Messages[i].Content = contents

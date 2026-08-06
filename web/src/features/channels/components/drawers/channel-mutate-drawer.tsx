@@ -288,6 +288,7 @@ const SENSITIVE_FORM_FIELDS = [
   'http2_connection_shards',
   'pass_through_body_enabled',
   'system_prompt',
+  'system_prompt_by_key',
   'system_prompt_override',
   'allow_service_tier',
   'disable_store',
@@ -337,6 +338,7 @@ function hasAdvancedSettingsValues(values: ChannelFormValues): boolean {
     values.weight ||
     values.proxy?.trim() ||
     values.system_prompt?.trim() ||
+    values.system_prompt_by_key?.trim() ||
     values.force_format ||
     values.thinking_to_content ||
     values.pass_through_body_enabled ||
@@ -4341,6 +4343,31 @@ export function ChannelMutateDrawer({
                                   <FormDescription>
                                     {t(
                                       'Default system prompt for this channel'
+                                    )}
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name='system_prompt_by_key'
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    {t('System Prompt by Key')}
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      placeholder='{ "0": "Prompt for key 0", "1": "Prompt for key 1" }'
+                                      rows={3}
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    {t(
+                                      'Optional JSON object mapping multi-key key indexes to system prompts; unmatched keys use the default channel prompt.'
                                     )}
                                   </FormDescription>
                                   <FormMessage />

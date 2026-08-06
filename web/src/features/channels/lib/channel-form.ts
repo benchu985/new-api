@@ -260,6 +260,10 @@ export const channelFormSchema = z
     http2_connection_shards: z.number().int().optional(),
     pass_through_body_enabled: z.boolean().optional(),
     system_prompt: z.string().optional(),
+    system_prompt_by_key: z
+      .string()
+      .optional()
+      .refine(isOptionalJsonObject, ERROR_MESSAGES.INVALID_JSON),
     system_prompt_override: z.boolean().optional(),
     system_prompt_overwrite: z.boolean().optional(),
     system_prompt_prepend: z.boolean().optional(),
@@ -434,6 +438,7 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   http2_connection_shards: 1,
   pass_through_body_enabled: false,
   system_prompt: '',
+  system_prompt_by_key: '',
   system_prompt_override: false,
   system_prompt_overwrite: false,
   system_prompt_prepend: false,
@@ -476,6 +481,7 @@ export function transformChannelToFormDefaults(
     http2_connection_shards: 1,
     pass_through_body_enabled: false,
     system_prompt: '',
+    system_prompt_by_key: '',
     system_prompt_override: false,
     system_prompt_overwrite: false,
     system_prompt_prepend: false,
@@ -497,6 +503,9 @@ export function transformChannelToFormDefaults(
           protocol === HTTP_PROTOCOL_HTTP1 ? 1 : shards,
         pass_through_body_enabled: parsed.pass_through_body_enabled || false,
         system_prompt: parsed.system_prompt || '',
+        system_prompt_by_key: parsed.system_prompt_by_key
+          ? JSON.stringify(parsed.system_prompt_by_key, null, 2)
+          : '',
         system_prompt_override: parsed.system_prompt_override || false,
         system_prompt_overwrite: parsed.system_prompt_overwrite || false,
         system_prompt_prepend: parsed.system_prompt_prepend || false,
@@ -616,6 +625,9 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
     proxy: formData.proxy?.trim() || '',
     pass_through_body_enabled: formData.pass_through_body_enabled || false,
     system_prompt: formData.system_prompt || '',
+    system_prompt_by_key: parseOptionalJson(
+      formData.system_prompt_by_key
+    ),
     system_prompt_override: formData.system_prompt_override || false,
     system_prompt_overwrite: formData.system_prompt_overwrite || false,
     system_prompt_prepend: formData.system_prompt_prepend || false,
