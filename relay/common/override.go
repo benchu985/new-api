@@ -175,6 +175,33 @@ func buildLegacyParamOverride(paramOverride map[string]interface{}) map[string]i
 	return legacy
 }
 
+// ParamOverrideTargetsStream reports whether the param override explicitly
+// touches the top-level "stream" field (legacy key or operations path).
+func ParamOverrideTargetsStream(paramOverride map[string]interface{}) bool {
+	if len(paramOverride) == 0 {
+		return false
+	}
+	if operations, ok := tryParseOperations(paramOverride); ok {
+		for _, operation := range operations {
+			if strings.EqualFold(strings.TrimSpace(operation.Path), "stream") {
+				return true
+			}
+		}
+		for key := range buildLegacyParamOverride(paramOverride) {
+			if strings.EqualFold(strings.TrimSpace(key), "stream") {
+				return true
+			}
+		}
+		return false
+	}
+	for key := range paramOverride {
+		if strings.EqualFold(strings.TrimSpace(key), "stream") {
+			return true
+		}
+	}
+	return false
+}
+
 func ApplyParamOverrideWithRelayInfo(jsonData []byte, info *RelayInfo) ([]byte, error) {
 	paramOverride := getParamOverrideMap(info)
 	if len(paramOverride) == 0 {

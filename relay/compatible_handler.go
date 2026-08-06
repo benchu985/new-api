@@ -18,6 +18,7 @@ import (
 	"github.com/QuantumNous/new-api/setting/model_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/samber/lo"
+	"github.com/tidwall/gjson"
 
 	"github.com/gin-gonic/gin"
 )
@@ -135,6 +136,14 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 			jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
 			if err != nil {
 				return newAPIErrorFromParamOverride(err)
+			}
+			// 参数覆盖显式设置了 stream 时，同步流式处理模式（上游将按覆盖后的值返回）
+			if relaycommon.ParamOverrideTargetsStream(info.ParamOverride) {
+				if v := gjson.GetBytes(jsonData, "stream"); v.Exists() {
+					info.IsStream = v.Bool()
+				} else {
+					info.IsStream = false
+				}
 			}
 		}
 

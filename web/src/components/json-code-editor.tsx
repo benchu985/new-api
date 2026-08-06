@@ -272,15 +272,15 @@ export function JsonCodeEditor({
       data-form-root={dataFormRoot}
       {...rootProps}
     >
-      <div className='bg-muted/30 flex h-8 items-center justify-between border-b px-2'>
-        <div className='text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs font-medium'>
-          <Braces className='h-3.5 w-3.5' aria-hidden='true' />
-          <span>{t('JSON')}</span>
-          <span className='text-muted-foreground/70 font-mono'>
+      <div className='bg-muted/30 flex min-h-8 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b px-2 py-1'>
+        <div className='text-muted-foreground flex min-w-0 shrink items-center gap-1.5 text-xs font-medium'>
+          <Braces className='h-3.5 w-3.5 shrink-0' aria-hidden='true' />
+          <span className='shrink-0'>{t('JSON')}</span>
+          <span className='text-muted-foreground/70 font-mono tabular-nums whitespace-nowrap'>
             {cursorText}
           </span>
         </div>
-        <div className='flex items-center gap-2'>
+        <div className='flex shrink-0 items-center gap-2 whitespace-nowrap'>
           <span
             className={cn(
               'flex items-center gap-1 text-xs',

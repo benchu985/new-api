@@ -4427,7 +4427,7 @@
     "System Prompt Concatenation": "系统提示词连接",
     "System Prompt Override": "系统提示覆盖",
     "Overwrite System Prompt": "覆写提示词",
-    "Replace user's system prompt with channel system prompt": "用渠道系统提示词覆写用户的系统提示词",
+    "Replace user&apos;s system prompt with channel system prompt": "用渠道系统提示词覆写用户的系统提示词",
     "Prepend System Prompt": "提示词添加最前",
     "Force channel system prompt as the first message": "将渠道系统提示词作为第一条消息添加到最前",
     "System settings": "系统设置",

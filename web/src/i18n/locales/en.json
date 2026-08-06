@@ -4427,7 +4427,7 @@
     "System Prompt Concatenation": "System Prompt Concatenation",
     "System Prompt Override": "System Prompt Override",
     "Overwrite System Prompt": "Overwrite System Prompt",
-    "Replace user's system prompt with channel system prompt": "Replace user's system prompt with channel system prompt",
+    "Replace user&apos;s system prompt with channel system prompt": "Replace user's system prompt with channel system prompt",
     "Prepend System Prompt": "Prepend System Prompt",
     "Force channel system prompt as the first message": "Force channel system prompt as the first message",
     "System settings": "System settings",
