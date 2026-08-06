@@ -289,6 +289,8 @@ const SENSITIVE_FORM_FIELDS = [
   'pass_through_body_enabled',
   'system_prompt',
   'system_prompt_by_key',
+  'system_prompt_key',
+  'system_prompt_key_prompt',
   'system_prompt_override',
   'allow_service_tier',
   'disable_store',
@@ -324,6 +326,23 @@ function hasConfiguredOverrideValue(value: unknown): boolean {
   }
 
   return true
+}
+
+function parseSystemPromptByKey(
+  value: string | undefined
+): Record<string, string> {
+  if (!value?.trim()) return {}
+  try {
+    const parsed = JSON.parse(value)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        ([key, prompt]) => /^\d+$/.test(key) && typeof prompt === 'string'
+      )
+    ) as Record<string, string>
+  } catch {
+    return {}
+  }
 }
 
 function hasAdvancedSettingsValues(values: ChannelFormValues): boolean {
@@ -4350,30 +4369,149 @@ export function ChannelMutateDrawer({
                               )}
                             />
 
-                            <FormField
-                              control={form.control}
-                              name='system_prompt_by_key'
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>
-                                    {t('System Prompt by Key')}
-                                  </FormLabel>
-                                  <FormControl>
-                                    <Textarea
-                                      placeholder='{ "0": "Prompt for key 0", "1": "Prompt for key 1" }'
-                                      rows={3}
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormDescription>
-                                    {t(
-                                      'Optional JSON object mapping multi-key key indexes to system prompts; unmatched keys use the default channel prompt.'
-                                    )}
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                            {isMultiKeyChannel && (
+                              <>
+                                <FormField
+                                  control={form.control}
+                                  name='system_prompt_key'
+                                  render={({ field }) => {
+                                    const keyItems = Array.from(
+                                      {
+                                        length:
+                                          channelData?.data?.channel_info
+                                            ?.multi_key_size || 0,
+                                      },
+                                      (_, index) => ({
+                                        value: String(index),
+                                        label: `Key ${index}`,
+                                      })
+                                    )
+                                    return (
+                                      <FormItem>
+                                        <FormLabel>
+                                          {t('Select Key')}
+                                        </FormLabel>
+                                        <Select
+                                          items={keyItems}
+                                          value={field.value || '0'}
+                                          onValueChange={(nextKey) => {
+                                            const promptByKey =
+                                              parseSystemPromptByKey(
+                                                form.getValues(
+                                                  'system_prompt_by_key'
+                                                )
+                                              )
+                                            const previousKey =
+                                              field.value || '0'
+                                            const previousPrompt =
+                                              form.getValues(
+                                                'system_prompt_key_prompt'
+                                              ) || ''
+                                            if (previousPrompt.trim()) {
+                                              promptByKey[previousKey] =
+                                                previousPrompt
+                                            } else {
+                                              delete promptByKey[previousKey]
+                                            }
+                                            form.setValue(
+                                              'system_prompt_by_key',
+                                              Object.keys(promptByKey).length > 0
+                                                ? JSON.stringify(promptByKey)
+                                                : '',
+                                              { shouldDirty: true }
+                                            )
+                                            field.onChange(nextKey)
+                                            form.setValue(
+                                              'system_prompt_key_prompt',
+                                              promptByKey[nextKey] || ''
+                                            )
+                                          }}
+                                        >
+                                          <FormControl>
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent
+                                            alignItemWithTrigger={false}
+                                          >
+                                            <SelectGroup>
+                                              {keyItems.map((item) => (
+                                                <SelectItem
+                                                  key={item.value}
+                                                  value={item.value}
+                                                >
+                                                  {item.label}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectGroup>
+                                          </SelectContent>
+                                        </Select>
+                                        <FormDescription>
+                                          {t(
+                                            'Select a Key from this multi-key channel.'
+                                          )}
+                                        </FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )
+                                  }}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name='system_prompt_key_prompt'
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>
+                                        {t('Key-specific System Prompt')}
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Textarea
+                                          placeholder={t(
+                                            'Enter the system prompt for the selected Key'
+                                          )}
+                                          rows={3}
+                                          {...field}
+                                          onChange={(event) => {
+                                            const value = event.target.value
+                                            field.onChange(value)
+                                            const selectedKey =
+                                              form.getValues(
+                                                'system_prompt_key'
+                                              ) || '0'
+                                            const promptByKey =
+                                              parseSystemPromptByKey(
+                                                form.getValues(
+                                                  'system_prompt_by_key'
+                                                )
+                                              )
+                                            if (value.trim()) {
+                                              promptByKey[selectedKey] = value
+                                            } else {
+                                              delete promptByKey[selectedKey]
+                                            }
+                                            form.setValue(
+                                              'system_prompt_by_key',
+                                              Object.keys(promptByKey).length > 0
+                                                ? JSON.stringify(promptByKey)
+                                                : '',
+                                              { shouldDirty: true }
+                                            )
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        {t(
+                                          'This prompt is used only when the selected Key handles the request; otherwise the default channel prompt is used.'
+                                        )}
+                                      </FormDescription>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </>
+                            )}
 
                             <FormField
                               control={form.control}

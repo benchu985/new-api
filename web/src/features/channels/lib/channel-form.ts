@@ -264,6 +264,8 @@ export const channelFormSchema = z
       .string()
       .optional()
       .refine(isOptionalJsonObject, ERROR_MESSAGES.INVALID_JSON),
+    system_prompt_key: z.string().optional(),
+    system_prompt_key_prompt: z.string().optional(),
     system_prompt_override: z.boolean().optional(),
     system_prompt_overwrite: z.boolean().optional(),
     system_prompt_prepend: z.boolean().optional(),
@@ -439,6 +441,8 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   pass_through_body_enabled: false,
   system_prompt: '',
   system_prompt_by_key: '',
+  system_prompt_key: '0',
+  system_prompt_key_prompt: '',
   system_prompt_override: false,
   system_prompt_overwrite: false,
   system_prompt_prepend: false,
@@ -482,6 +486,8 @@ export function transformChannelToFormDefaults(
     pass_through_body_enabled: false,
     system_prompt: '',
     system_prompt_by_key: '',
+    system_prompt_key: '0',
+    system_prompt_key_prompt: '',
     system_prompt_override: false,
     system_prompt_overwrite: false,
     system_prompt_prepend: false,
@@ -494,6 +500,15 @@ export function transformChannelToFormDefaults(
       const shards = normalizeHttp2ConnectionShards(
         parsed.http2_connection_shards
       )
+      const systemPromptByKey = isJsonObjectValue(
+        parsed.system_prompt_by_key
+      )
+        ? parsed.system_prompt_by_key
+        : {}
+      const firstSystemPromptKey =
+        Object.keys(systemPromptByKey).sort((left, right) =>
+          left.localeCompare(right, undefined, { numeric: true })
+        )[0] || '0'
       extraSettings = {
         force_format: parsed.force_format || false,
         thinking_to_content: parsed.thinking_to_content || false,
@@ -503,9 +518,15 @@ export function transformChannelToFormDefaults(
           protocol === HTTP_PROTOCOL_HTTP1 ? 1 : shards,
         pass_through_body_enabled: parsed.pass_through_body_enabled || false,
         system_prompt: parsed.system_prompt || '',
-        system_prompt_by_key: parsed.system_prompt_by_key
-          ? JSON.stringify(parsed.system_prompt_by_key, null, 2)
-          : '',
+        system_prompt_by_key:
+          Object.keys(systemPromptByKey).length > 0
+            ? JSON.stringify(systemPromptByKey)
+            : '',
+        system_prompt_key: firstSystemPromptKey,
+        system_prompt_key_prompt:
+          typeof systemPromptByKey[firstSystemPromptKey] === 'string'
+            ? systemPromptByKey[firstSystemPromptKey]
+            : '',
         system_prompt_override: parsed.system_prompt_override || false,
         system_prompt_overwrite: parsed.system_prompt_overwrite || false,
         system_prompt_prepend: parsed.system_prompt_prepend || false,
