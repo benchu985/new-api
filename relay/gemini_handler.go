@@ -105,7 +105,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 			}
 		} else if len(request.SystemInstructions.Parts) == 0 {
 			request.SystemInstructions.Parts = []dto.GeminiPart{{Text: systemPrompt}}
-		} else if info.ChannelSetting.SystemPromptOverwrite {
+		} else if info.ChannelSetting.IsSystemPromptOverwrite(info.ChannelMultiKeyIndex) {
 			// 覆写提示词：用渠道提示词整体替换用户 system instructions
 			common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
 			request.SystemInstructions = &dto.GeminiChatContent{
@@ -113,7 +113,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 					{Text: systemPrompt},
 				},
 			}
-		} else if info.ChannelSetting.SystemPromptOverride {
+		} else if info.ChannelSetting.IsSystemPromptOverride(info.ChannelMultiKeyIndex) {
 			common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
 			merged := false
 			for i := range request.SystemInstructions.Parts {

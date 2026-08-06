@@ -289,8 +289,12 @@ const SENSITIVE_FORM_FIELDS = [
   'pass_through_body_enabled',
   'system_prompt',
   'system_prompt_by_key',
+  'system_prompt_overwrite_by_key',
+  'system_prompt_prepend_by_key',
   'system_prompt_key',
   'system_prompt_key_prompt',
+  'system_prompt_key_overwrite',
+  'system_prompt_key_prepend',
   'system_prompt_override',
   'allow_service_tier',
   'disable_store',
@@ -340,6 +344,21 @@ function parseSystemPromptByKey(
         ([key, prompt]) => /^\d+$/.test(key) && typeof prompt === 'string'
       )
     ) as Record<string, string>
+  } catch {
+    return {}
+  }
+}
+
+function parseBooleanMap(value: string | undefined): Record<string, boolean> {
+  if (!value?.trim()) return {}
+  try {
+    const parsed = JSON.parse(value)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        ([key, enabled]) => /^\d+$/.test(key) && typeof enabled === 'boolean'
+      )
+    ) as Record<string, boolean>
   } catch {
     return {}
   }
@@ -4401,6 +4420,17 @@ export function ChannelMutateDrawer({
                                                   'system_prompt_by_key'
                                                 )
                                               )
+                                            const overwriteByKey =
+                                              parseBooleanMap(
+                                                form.getValues(
+                                                  'system_prompt_overwrite_by_key'
+                                                )
+                                              )
+                                            const prependByKey = parseBooleanMap(
+                                              form.getValues(
+                                                'system_prompt_prepend_by_key'
+                                              )
+                                            )
                                             const previousKey =
                                               field.value || '0'
                                             const previousPrompt =
@@ -4413,6 +4443,14 @@ export function ChannelMutateDrawer({
                                             } else {
                                               delete promptByKey[previousKey]
                                             }
+                                            overwriteByKey[previousKey] =
+                                              form.getValues(
+                                                'system_prompt_key_overwrite'
+                                              ) === true
+                                            prependByKey[previousKey] =
+                                              form.getValues(
+                                                'system_prompt_key_prepend'
+                                              ) === true
                                             form.setValue(
                                               'system_prompt_by_key',
                                               Object.keys(promptByKey).length > 0
@@ -4420,10 +4458,28 @@ export function ChannelMutateDrawer({
                                                 : '',
                                               { shouldDirty: true }
                                             )
+                                            form.setValue(
+                                              'system_prompt_overwrite_by_key',
+                                              JSON.stringify(overwriteByKey),
+                                              { shouldDirty: true }
+                                            )
+                                            form.setValue(
+                                              'system_prompt_prepend_by_key',
+                                              JSON.stringify(prependByKey),
+                                              { shouldDirty: true }
+                                            )
                                             field.onChange(nextKey)
                                             form.setValue(
                                               'system_prompt_key_prompt',
                                               promptByKey[nextKey] || ''
+                                            )
+                                            form.setValue(
+                                              'system_prompt_key_overwrite',
+                                              overwriteByKey[nextKey] === true
+                                            )
+                                            form.setValue(
+                                              'system_prompt_key_prepend',
+                                              prependByKey[nextKey] === true
                                             )
                                           }}
                                         >
@@ -4507,6 +4563,90 @@ export function ChannelMutateDrawer({
                                         )}
                                       </FormDescription>
                                       <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name='system_prompt_key_overwrite'
+                                  render={({ field }) => (
+                                    <FormItem className='flex items-center justify-between'>
+                                      <div className='space-y-0.5'>
+                                        <FormLabel>
+                                          {t('Overwrite for Selected Key')}
+                                        </FormLabel>
+                                        <FormDescription>
+                                          {t(
+                                            'Replace the user system prompt only for the selected Key.'
+                                          )}
+                                        </FormDescription>
+                                      </div>
+                                      <FormControl>
+                                        <Switch
+                                          checked={field.value === true}
+                                          onCheckedChange={(value) => {
+                                            field.onChange(value)
+                                            const selectedKey =
+                                              form.getValues(
+                                                'system_prompt_key'
+                                              ) || '0'
+                                            const overwriteByKey =
+                                              parseBooleanMap(
+                                                form.getValues(
+                                                  'system_prompt_overwrite_by_key'
+                                                )
+                                              )
+                                            overwriteByKey[selectedKey] = value
+                                            form.setValue(
+                                              'system_prompt_overwrite_by_key',
+                                              JSON.stringify(overwriteByKey),
+                                              { shouldDirty: true }
+                                            )
+                                          }}
+                                        />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name='system_prompt_key_prepend'
+                                  render={({ field }) => (
+                                    <FormItem className='flex items-center justify-between'>
+                                      <div className='space-y-0.5'>
+                                        <FormLabel>
+                                          {t('Prepend for Selected Key')}
+                                        </FormLabel>
+                                        <FormDescription>
+                                          {t(
+                                            'Put the selected Key system prompt first in the message list.'
+                                          )}
+                                        </FormDescription>
+                                      </div>
+                                      <FormControl>
+                                        <Switch
+                                          checked={field.value === true}
+                                          onCheckedChange={(value) => {
+                                            field.onChange(value)
+                                            const selectedKey =
+                                              form.getValues(
+                                                'system_prompt_key'
+                                              ) || '0'
+                                            const prependByKey = parseBooleanMap(
+                                              form.getValues(
+                                                'system_prompt_prepend_by_key'
+                                              )
+                                            )
+                                            prependByKey[selectedKey] = value
+                                            form.setValue(
+                                              'system_prompt_prepend_by_key',
+                                              JSON.stringify(prependByKey),
+                                              { shouldDirty: true }
+                                            )
+                                          }}
+                                        />
+                                      </FormControl>
                                     </FormItem>
                                   )}
                                 />

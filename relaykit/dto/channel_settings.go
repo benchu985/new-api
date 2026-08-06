@@ -11,15 +11,18 @@ import (
 )
 
 type ChannelSettings struct {
-	ForceFormat            bool           `json:"force_format,omitempty"`
-	ThinkingToContent      bool           `json:"thinking_to_content,omitempty"`
-	Proxy                  string         `json:"proxy"`
-	PassThroughBodyEnabled bool           `json:"pass_through_body_enabled,omitempty"`
-	SystemPrompt           string         `json:"system_prompt,omitempty"`
-	SystemPromptByKey      map[int]string `json:"system_prompt_by_key,omitempty"` // key index -> system prompt
-	SystemPromptOverride   bool           `json:"system_prompt_override,omitempty"`
-	SystemPromptOverwrite  bool           `json:"system_prompt_overwrite,omitempty"` // 覆写提示词：用渠道提示词整体替换用户的 system
-	SystemPromptPrepend    bool           `json:"system_prompt_prepend,omitempty"`   // 提示词添加最前：强制将渠道提示词置于消息列表首位
+	ForceFormat                bool           `json:"force_format,omitempty"`
+	ThinkingToContent          bool           `json:"thinking_to_content,omitempty"`
+	Proxy                      string         `json:"proxy"`
+	PassThroughBodyEnabled     bool           `json:"pass_through_body_enabled,omitempty"`
+	SystemPrompt               string         `json:"system_prompt,omitempty"`
+	SystemPromptByKey          map[int]string `json:"system_prompt_by_key,omitempty"`           // key index -> system prompt
+	SystemPromptOverrideByKey  map[int]bool   `json:"system_prompt_override_by_key,omitempty"`  // key index -> concatenate prompt
+	SystemPromptOverwriteByKey map[int]bool   `json:"system_prompt_overwrite_by_key,omitempty"` // key index -> overwrite prompt
+	SystemPromptPrependByKey   map[int]bool   `json:"system_prompt_prepend_by_key,omitempty"`   // key index -> prepend prompt
+	SystemPromptOverride       bool           `json:"system_prompt_override,omitempty"`
+	SystemPromptOverwrite      bool           `json:"system_prompt_overwrite,omitempty"` // 覆写提示词：用渠道提示词整体替换用户的 system
+	SystemPromptPrepend        bool           `json:"system_prompt_prepend,omitempty"`   // 提示词添加最前：强制将渠道提示词置于消息列表首位
 	// HTTPProtocol controls outbound HTTP version negotiation for this channel.
 	// Accepted values: "", "auto" (default), "http1".
 	HTTPProtocol string `json:"http_protocol,omitempty"`
@@ -35,6 +38,27 @@ func (s ChannelSettings) GetSystemPrompt(keyIndex int) string {
 		return prompt
 	}
 	return s.SystemPrompt
+}
+
+func (s ChannelSettings) IsSystemPromptOverride(keyIndex int) bool {
+	if value, ok := s.SystemPromptOverrideByKey[keyIndex]; ok {
+		return value
+	}
+	return s.SystemPromptOverride
+}
+
+func (s ChannelSettings) IsSystemPromptOverwrite(keyIndex int) bool {
+	if value, ok := s.SystemPromptOverwriteByKey[keyIndex]; ok {
+		return value
+	}
+	return s.SystemPromptOverwrite
+}
+
+func (s ChannelSettings) IsSystemPromptPrepend(keyIndex int) bool {
+	if value, ok := s.SystemPromptPrependByKey[keyIndex]; ok {
+		return value
+	}
+	return s.SystemPromptPrepend
 }
 
 const (

@@ -111,11 +111,11 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 	if systemPrompt != "" {
 		if request.System == nil {
 			request.SetStringSystem(systemPrompt)
-		} else if info.ChannelSetting.SystemPromptOverwrite {
+		} else if info.ChannelSetting.IsSystemPromptOverwrite(info.ChannelMultiKeyIndex) {
 			// 覆写提示词：用渠道提示词整体替换用户 system
 			common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
 			request.SetStringSystem(systemPrompt)
-		} else if info.ChannelSetting.SystemPromptOverride {
+		} else if info.ChannelSetting.IsSystemPromptOverride(info.ChannelMultiKeyIndex) {
 			common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
 			if request.IsStringSystem() {
 				existing := strings.TrimSpace(request.GetStringSystem())

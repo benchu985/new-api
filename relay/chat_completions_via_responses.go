@@ -47,7 +47,7 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 		return
 	}
 
-	if info.ChannelSetting.SystemPromptOverwrite {
+	if info.ChannelSetting.IsSystemPromptOverwrite(info.ChannelMultiKeyIndex) {
 		// 覆写提示词：用渠道提示词整体替换用户 system 消息内容
 		common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
 		for i, message := range request.Messages {
@@ -55,7 +55,7 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 				continue
 			}
 			request.Messages[i].SetStringContent(systemPrompt)
-			if info.ChannelSetting.SystemPromptPrepend && i != 0 {
+			if info.ChannelSetting.IsSystemPromptPrepend(info.ChannelMultiKeyIndex) && i != 0 {
 				// 提示词添加最前：将替换后的 system 移到消息列表首位
 				msg := request.Messages[i]
 				request.Messages = append(request.Messages[:i], request.Messages[i+1:]...)
@@ -65,11 +65,11 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 		}
 	}
 
-	if !info.ChannelSetting.SystemPromptOverride && !info.ChannelSetting.SystemPromptPrepend {
+	if !info.ChannelSetting.IsSystemPromptOverride(info.ChannelMultiKeyIndex) && !info.ChannelSetting.IsSystemPromptPrepend(info.ChannelMultiKeyIndex) {
 		return
 	}
 
-	// 拼接前置：渠道提示词 + "\n" + 用户原有 system（新开关 SystemPromptPrepend 与旧开关 SystemPromptOverride 均触发）
+	// 拼接前置：渠道提示词 + "\n" + 用户原有 system
 	common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
 	for i, message := range request.Messages {
 		if message.Role != systemRole {
@@ -87,7 +87,7 @@ func applySystemPromptIfNeeded(c *gin.Context, info *relaycommon.RelayInfo, requ
 			}, contents...)
 			request.Messages[i].Content = contents
 		}
-		if info.ChannelSetting.SystemPromptPrepend && i != 0 {
+		if info.ChannelSetting.IsSystemPromptPrepend(info.ChannelMultiKeyIndex) && i != 0 {
 			// 提示词添加最前：将拼接后的 system 移到消息列表首位
 			msg := request.Messages[i]
 			request.Messages = append(request.Messages[:i], request.Messages[i+1:]...)

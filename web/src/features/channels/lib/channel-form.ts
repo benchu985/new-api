@@ -264,8 +264,18 @@ export const channelFormSchema = z
       .string()
       .optional()
       .refine(isOptionalJsonObject, ERROR_MESSAGES.INVALID_JSON),
+    system_prompt_overwrite_by_key: z
+      .string()
+      .optional()
+      .refine(isOptionalJsonObject, ERROR_MESSAGES.INVALID_JSON),
+    system_prompt_prepend_by_key: z
+      .string()
+      .optional()
+      .refine(isOptionalJsonObject, ERROR_MESSAGES.INVALID_JSON),
     system_prompt_key: z.string().optional(),
     system_prompt_key_prompt: z.string().optional(),
+    system_prompt_key_overwrite: z.boolean().optional(),
+    system_prompt_key_prepend: z.boolean().optional(),
     system_prompt_override: z.boolean().optional(),
     system_prompt_overwrite: z.boolean().optional(),
     system_prompt_prepend: z.boolean().optional(),
@@ -441,8 +451,12 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   pass_through_body_enabled: false,
   system_prompt: '',
   system_prompt_by_key: '',
+  system_prompt_overwrite_by_key: '',
+  system_prompt_prepend_by_key: '',
   system_prompt_key: '0',
   system_prompt_key_prompt: '',
+  system_prompt_key_overwrite: false,
+  system_prompt_key_prepend: false,
   system_prompt_override: false,
   system_prompt_overwrite: false,
   system_prompt_prepend: false,
@@ -486,8 +500,12 @@ export function transformChannelToFormDefaults(
     pass_through_body_enabled: false,
     system_prompt: '',
     system_prompt_by_key: '',
+    system_prompt_overwrite_by_key: '',
+    system_prompt_prepend_by_key: '',
     system_prompt_key: '0',
     system_prompt_key_prompt: '',
+    system_prompt_key_overwrite: false,
+    system_prompt_key_prepend: false,
     system_prompt_override: false,
     system_prompt_overwrite: false,
     system_prompt_prepend: false,
@@ -504,6 +522,16 @@ export function transformChannelToFormDefaults(
         parsed.system_prompt_by_key
       )
         ? parsed.system_prompt_by_key
+        : {}
+      const systemPromptOverwriteByKey = isJsonObjectValue(
+        parsed.system_prompt_overwrite_by_key
+      )
+        ? parsed.system_prompt_overwrite_by_key
+        : {}
+      const systemPromptPrependByKey = isJsonObjectValue(
+        parsed.system_prompt_prepend_by_key
+      )
+        ? parsed.system_prompt_prepend_by_key
         : {}
       const firstSystemPromptKey =
         Object.keys(systemPromptByKey).sort((left, right) =>
@@ -523,10 +551,22 @@ export function transformChannelToFormDefaults(
             ? JSON.stringify(systemPromptByKey)
             : '',
         system_prompt_key: firstSystemPromptKey,
+        system_prompt_overwrite_by_key:
+          Object.keys(systemPromptOverwriteByKey).length > 0
+            ? JSON.stringify(systemPromptOverwriteByKey)
+            : '',
+        system_prompt_prepend_by_key:
+          Object.keys(systemPromptPrependByKey).length > 0
+            ? JSON.stringify(systemPromptPrependByKey)
+            : '',
         system_prompt_key_prompt:
           typeof systemPromptByKey[firstSystemPromptKey] === 'string'
             ? systemPromptByKey[firstSystemPromptKey]
             : '',
+        system_prompt_key_overwrite:
+          systemPromptOverwriteByKey[firstSystemPromptKey] === true,
+        system_prompt_key_prepend:
+          systemPromptPrependByKey[firstSystemPromptKey] === true,
         system_prompt_override: parsed.system_prompt_override || false,
         system_prompt_overwrite: parsed.system_prompt_overwrite || false,
         system_prompt_prepend: parsed.system_prompt_prepend || false,
@@ -648,6 +688,12 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
     system_prompt: formData.system_prompt || '',
     system_prompt_by_key: parseOptionalJson(
       formData.system_prompt_by_key
+    ),
+    system_prompt_overwrite_by_key: parseOptionalJson(
+      formData.system_prompt_overwrite_by_key
+    ),
+    system_prompt_prepend_by_key: parseOptionalJson(
+      formData.system_prompt_prepend_by_key
     ),
     system_prompt_override: formData.system_prompt_override || false,
     system_prompt_overwrite: formData.system_prompt_overwrite || false,
