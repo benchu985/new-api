@@ -133,6 +133,7 @@ import {
   getChannel,
   getChannelKey,
   getGroups,
+  getMultiKeyStatus,
   getPrefillGroups,
   refreshCodexCredential,
 } from '../../api'
@@ -704,6 +705,15 @@ export function ChannelMutateDrawer({
     queryKey: channelsQueryKeys.detail(channelId || 0),
     queryFn: () => getChannel(channelId || 0),
     enabled: isEditing && Boolean(channelId),
+  })
+
+  const { data: multiKeyStatusData } = useQuery({
+    queryKey: ['channel_multi_key_status', channelId],
+    queryFn: () => getMultiKeyStatus(channelId || 0, 1, 1000),
+    enabled:
+      isEditing &&
+      Boolean(channelId) &&
+      channelData?.data?.channel_info?.is_multi_key === true,
   })
 
   // Fetch available groups
@@ -4400,10 +4410,18 @@ export function ChannelMutateDrawer({
                                           channelData?.data?.channel_info
                                             ?.multi_key_size || 0,
                                       },
-                                      (_, index) => ({
-                                        value: String(index),
-                                        label: `Key ${index}`,
-                                      })
+                                      (_, index) => {
+                                        const keyStatus =
+                                          multiKeyStatusData?.data?.keys?.find(
+                                            (item) => item.index === index
+                                          )
+                                        return {
+                                          value: String(index),
+                                          label:
+                                            keyStatus?.key_preview ||
+                                            `Key ${index + 1}`,
+                                        }
+                                      }
                                     )
                                     return (
                                       <FormItem>
