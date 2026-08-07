@@ -260,22 +260,22 @@ export const channelFormSchema = z
     http2_connection_shards: z.number().int().optional(),
     pass_through_body_enabled: z.boolean().optional(),
     system_prompt: z.string().optional(),
-    system_prompt_by_key: z
+    system_prompt_by_token: z
       .string()
       .optional()
       .refine(isOptionalJsonObject, ERROR_MESSAGES.INVALID_JSON),
-    system_prompt_overwrite_by_key: z
+    system_prompt_overwrite_by_token: z
       .string()
       .optional()
       .refine(isOptionalJsonObject, ERROR_MESSAGES.INVALID_JSON),
-    system_prompt_prepend_by_key: z
+    system_prompt_prepend_by_token: z
       .string()
       .optional()
       .refine(isOptionalJsonObject, ERROR_MESSAGES.INVALID_JSON),
-    system_prompt_key: z.string().optional(),
-    system_prompt_key_prompt: z.string().optional(),
-    system_prompt_key_overwrite: z.boolean().optional(),
-    system_prompt_key_prepend: z.boolean().optional(),
+    system_prompt_token: z.string().optional(),
+    system_prompt_token_prompt: z.string().optional(),
+    system_prompt_token_overwrite: z.boolean().optional(),
+    system_prompt_token_prepend: z.boolean().optional(),
     system_prompt_override: z.boolean().optional(),
     system_prompt_overwrite: z.boolean().optional(),
     system_prompt_prepend: z.boolean().optional(),
@@ -450,13 +450,13 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   http2_connection_shards: 1,
   pass_through_body_enabled: false,
   system_prompt: '',
-  system_prompt_by_key: '',
-  system_prompt_overwrite_by_key: '',
-  system_prompt_prepend_by_key: '',
-  system_prompt_key: '0',
-  system_prompt_key_prompt: '',
-  system_prompt_key_overwrite: false,
-  system_prompt_key_prepend: false,
+  system_prompt_by_token: '',
+  system_prompt_overwrite_by_token: '',
+  system_prompt_prepend_by_token: '',
+  system_prompt_token: '0',
+  system_prompt_token_prompt: '',
+  system_prompt_token_overwrite: false,
+  system_prompt_token_prepend: false,
   system_prompt_override: false,
   system_prompt_overwrite: false,
   system_prompt_prepend: false,
@@ -499,13 +499,13 @@ export function transformChannelToFormDefaults(
     http2_connection_shards: 1,
     pass_through_body_enabled: false,
     system_prompt: '',
-    system_prompt_by_key: '',
-    system_prompt_overwrite_by_key: '',
-    system_prompt_prepend_by_key: '',
-    system_prompt_key: '0',
-    system_prompt_key_prompt: '',
-    system_prompt_key_overwrite: false,
-    system_prompt_key_prepend: false,
+    system_prompt_by_token: '',
+    system_prompt_overwrite_by_token: '',
+    system_prompt_prepend_by_token: '',
+    system_prompt_token: '0',
+    system_prompt_token_prompt: '',
+    system_prompt_token_overwrite: false,
+    system_prompt_token_prepend: false,
     system_prompt_override: false,
     system_prompt_overwrite: false,
     system_prompt_prepend: false,
@@ -518,23 +518,29 @@ export function transformChannelToFormDefaults(
       const shards = normalizeHttp2ConnectionShards(
         parsed.http2_connection_shards
       )
-      const systemPromptByKey = isJsonObjectValue(
-        parsed.system_prompt_by_key
+      const systemPromptByToken = isJsonObjectValue(
+        parsed.system_prompt_by_token
       )
-        ? parsed.system_prompt_by_key
+        ? parsed.system_prompt_by_token
         : {}
-      const systemPromptOverwriteByKey = isJsonObjectValue(
-        parsed.system_prompt_overwrite_by_key
+      const systemPromptOverwriteByToken = isJsonObjectValue(
+        parsed.system_prompt_overwrite_by_token
       )
-        ? parsed.system_prompt_overwrite_by_key
+        ? parsed.system_prompt_overwrite_by_token
         : {}
-      const systemPromptPrependByKey = isJsonObjectValue(
-        parsed.system_prompt_prepend_by_key
+      const systemPromptPrependByToken = isJsonObjectValue(
+        parsed.system_prompt_prepend_by_token
       )
-        ? parsed.system_prompt_prepend_by_key
+        ? parsed.system_prompt_prepend_by_token
         : {}
-      const firstSystemPromptKey =
-        Object.keys(systemPromptByKey).sort((left, right) =>
+      const firstSystemPromptTokenId =
+        Array.from(
+          new Set([
+            ...Object.keys(systemPromptByToken),
+            ...Object.keys(systemPromptOverwriteByToken),
+            ...Object.keys(systemPromptPrependByToken),
+          ])
+        ).sort((left, right) =>
           left.localeCompare(right, undefined, { numeric: true })
         )[0] || '0'
       extraSettings = {
@@ -546,27 +552,32 @@ export function transformChannelToFormDefaults(
           protocol === HTTP_PROTOCOL_HTTP1 ? 1 : shards,
         pass_through_body_enabled: parsed.pass_through_body_enabled || false,
         system_prompt: parsed.system_prompt || '',
-        system_prompt_by_key:
-          Object.keys(systemPromptByKey).length > 0
-            ? JSON.stringify(systemPromptByKey)
+        system_prompt_by_token:
+          Object.keys(systemPromptByToken).length > 0
+            ? JSON.stringify(systemPromptByToken)
             : '',
-        system_prompt_key: firstSystemPromptKey,
-        system_prompt_overwrite_by_key:
-          Object.keys(systemPromptOverwriteByKey).length > 0
-            ? JSON.stringify(systemPromptOverwriteByKey)
+        system_prompt_token: firstSystemPromptTokenId,
+        system_prompt_overwrite_by_token:
+          Object.keys(systemPromptOverwriteByToken).length > 0
+            ? JSON.stringify(systemPromptOverwriteByToken)
             : '',
-        system_prompt_prepend_by_key:
-          Object.keys(systemPromptPrependByKey).length > 0
-            ? JSON.stringify(systemPromptPrependByKey)
+        system_prompt_prepend_by_token:
+          Object.keys(systemPromptPrependByToken).length > 0
+            ? JSON.stringify(systemPromptPrependByToken)
             : '',
-        system_prompt_key_prompt:
-          typeof systemPromptByKey[firstSystemPromptKey] === 'string'
-            ? systemPromptByKey[firstSystemPromptKey]
+        system_prompt_token_prompt:
+          typeof systemPromptByToken[firstSystemPromptTokenId] === 'string'
+            ? systemPromptByToken[firstSystemPromptTokenId]
             : '',
-        system_prompt_key_overwrite:
-          systemPromptOverwriteByKey[firstSystemPromptKey] === true,
-        system_prompt_key_prepend:
-          systemPromptPrependByKey[firstSystemPromptKey] === true,
+        system_prompt_token_overwrite:
+          typeof systemPromptOverwriteByToken[firstSystemPromptTokenId] ===
+          'boolean'
+            ? systemPromptOverwriteByToken[firstSystemPromptTokenId]
+            : parsed.system_prompt_overwrite === true,
+        system_prompt_token_prepend:
+          typeof systemPromptPrependByToken[firstSystemPromptTokenId] === 'boolean'
+            ? systemPromptPrependByToken[firstSystemPromptTokenId]
+            : parsed.system_prompt_prepend === true,
         system_prompt_override: parsed.system_prompt_override || false,
         system_prompt_overwrite: parsed.system_prompt_overwrite || false,
         system_prompt_prepend: parsed.system_prompt_prepend || false,
@@ -686,14 +697,14 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
     proxy: formData.proxy?.trim() || '',
     pass_through_body_enabled: formData.pass_through_body_enabled || false,
     system_prompt: formData.system_prompt || '',
-    system_prompt_by_key: parseOptionalJson(
-      formData.system_prompt_by_key
+    system_prompt_by_token: parseOptionalJson(
+      formData.system_prompt_by_token
     ),
-    system_prompt_overwrite_by_key: parseOptionalJson(
-      formData.system_prompt_overwrite_by_key
+    system_prompt_overwrite_by_token: parseOptionalJson(
+      formData.system_prompt_overwrite_by_token
     ),
-    system_prompt_prepend_by_key: parseOptionalJson(
-      formData.system_prompt_prepend_by_key
+    system_prompt_prepend_by_token: parseOptionalJson(
+      formData.system_prompt_prepend_by_token
     ),
     system_prompt_override: formData.system_prompt_override || false,
     system_prompt_overwrite: formData.system_prompt_overwrite || false,

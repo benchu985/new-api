@@ -111,6 +111,7 @@ import {
   SecureVerificationDialog,
   useSecureVerification,
 } from '@/features/auth/secure-verification'
+import { getApiKeys } from '@/features/keys/api'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { useHiddenClickUnlock } from '@/hooks/use-hidden-click-unlock'
 import {
@@ -133,7 +134,6 @@ import {
   getChannel,
   getChannelKey,
   getGroups,
-  getMultiKeyStatus,
   getPrefillGroups,
   refreshCodexCredential,
 } from '../../api'
@@ -289,13 +289,13 @@ const SENSITIVE_FORM_FIELDS = [
   'http2_connection_shards',
   'pass_through_body_enabled',
   'system_prompt',
-  'system_prompt_by_key',
-  'system_prompt_overwrite_by_key',
-  'system_prompt_prepend_by_key',
-  'system_prompt_key',
-  'system_prompt_key_prompt',
-  'system_prompt_key_overwrite',
-  'system_prompt_key_prepend',
+  'system_prompt_by_token',
+  'system_prompt_overwrite_by_token',
+  'system_prompt_prepend_by_token',
+  'system_prompt_token',
+  'system_prompt_token_prompt',
+  'system_prompt_token_overwrite',
+  'system_prompt_token_prepend',
   'system_prompt_override',
   'allow_service_tier',
   'disable_store',
@@ -333,7 +333,7 @@ function hasConfiguredOverrideValue(value: unknown): boolean {
   return true
 }
 
-function parseSystemPromptByKey(
+function parseSystemPromptByToken(
   value: string | undefined
 ): Record<string, string> {
   if (!value?.trim()) return {}
@@ -377,7 +377,9 @@ function hasAdvancedSettingsValues(values: ChannelFormValues): boolean {
     values.weight ||
     values.proxy?.trim() ||
     values.system_prompt?.trim() ||
-    values.system_prompt_by_key?.trim() ||
+    values.system_prompt_by_token?.trim() ||
+    values.system_prompt_overwrite_by_token?.trim() ||
+    values.system_prompt_prepend_by_token?.trim() ||
     values.force_format ||
     values.thinking_to_content ||
     values.pass_through_body_enabled ||
@@ -707,13 +709,10 @@ export function ChannelMutateDrawer({
     enabled: isEditing && Boolean(channelId),
   })
 
-  const { data: multiKeyStatusData } = useQuery({
-    queryKey: ['channel_multi_key_status', channelId],
-    queryFn: () => getMultiKeyStatus(channelId || 0, 1, 1000),
-    enabled:
-      isEditing &&
-      Boolean(channelId) &&
-      channelData?.data?.channel_info?.is_multi_key === true,
+  const { data: userTokenData } = useQuery({
+    queryKey: ['user_api_keys_for_channel_prompt'],
+    queryFn: () => getApiKeys({ p: 1, size: 1000 }),
+    enabled: open,
   })
 
   // Fetch available groups
@@ -805,6 +804,13 @@ export function ChannelMutateDrawer({
   const currentHttpProtocol = form.watch('http_protocol')
   const currentHttp2ConnectionShards = form.watch('http2_connection_shards')
   const currentSystemPrompt = form.watch('system_prompt')
+  const currentSystemPromptByToken = form.watch('system_prompt_by_token')
+  const currentSystemPromptOverwriteByToken = form.watch(
+    'system_prompt_overwrite_by_token'
+  )
+  const currentSystemPromptPrependByToken = form.watch(
+    'system_prompt_prepend_by_token'
+  )
   const currentSystemPromptOverride = form.watch('system_prompt_override')
   const currentSystemPromptOverwrite = form.watch('system_prompt_overwrite')
   const currentSystemPromptPrepend = form.watch('system_prompt_prepend')
@@ -821,6 +827,40 @@ export function ChannelMutateDrawer({
   const currentUpstreamModelUpdateIgnoredModels = form.watch(
     'upstream_model_update_ignored_models'
   )
+
+  useEffect(() => {
+    const tokens = userTokenData?.data?.items || []
+    if (!open || tokens.length === 0) return
+
+    const selectedTokenId = form.getValues('system_prompt_token') || ''
+    if (tokens.some((token) => String(token.id) === selectedTokenId)) return
+
+    const nextTokenId = String(tokens[0].id)
+    const prompts = parseSystemPromptByToken(
+      form.getValues('system_prompt_by_token')
+    )
+    const overwriteByToken = parseBooleanMap(
+      form.getValues('system_prompt_overwrite_by_token')
+    )
+    const prependByToken = parseBooleanMap(
+      form.getValues('system_prompt_prepend_by_token')
+    )
+    form.setValue('system_prompt_token', nextTokenId)
+    form.setValue('system_prompt_token_prompt', prompts[nextTokenId] || '')
+    form.setValue(
+      'system_prompt_token_overwrite',
+      typeof overwriteByToken[nextTokenId] === 'boolean'
+        ? overwriteByToken[nextTokenId]
+        : form.getValues('system_prompt_overwrite') === true
+    )
+    form.setValue(
+      'system_prompt_token_prepend',
+      typeof prependByToken[nextTokenId] === 'boolean'
+        ? prependByToken[nextTokenId]
+        : form.getValues('system_prompt_prepend') === true
+    )
+  }, [channelData?.data?.setting, form, open, userTokenData])
+
   const shouldPreviewUnsavedModels =
     !isEditing ||
     (currentType === CHANNEL_TYPE_ADVANCED_CUSTOM && canEditSensitive)
@@ -1075,6 +1115,9 @@ export function ChannelMutateDrawer({
     currentDisableTaskPollingSleep ||
     currentProxy?.trim() ||
     currentSystemPrompt?.trim() ||
+    currentSystemPromptByToken?.trim() ||
+    currentSystemPromptOverwriteByToken?.trim() ||
+    currentSystemPromptPrependByToken?.trim() ||
     currentSystemPromptOverride ||
     currentSystemPromptOverwrite ||
     currentSystemPromptPrepend ||
@@ -4398,106 +4441,107 @@ export function ChannelMutateDrawer({
                               )}
                             />
 
-                            {isMultiKeyChannel && (
+                            {(userTokenData?.data?.items?.length ?? 0) > 0 && (
                               <>
                                 <FormField
                                   control={form.control}
-                                  name='system_prompt_key'
+                                  name='system_prompt_token'
                                   render={({ field }) => {
-                                    const keyItems = Array.from(
-                                      {
-                                        length:
-                                          channelData?.data?.channel_info
-                                            ?.multi_key_size || 0,
-                                      },
-                                      (_, index) => {
-                                        const keyStatus =
-                                          multiKeyStatusData?.data?.keys?.find(
-                                            (item) => item.index === index
-                                          )
-                                        return {
-                                          value: String(index),
-                                          label:
-                                            keyStatus?.key_preview ||
-                                            `Key ${index + 1}`,
-                                        }
-                                      }
-                                    )
+                                    const tokenItems = (
+                                      userTokenData?.data?.items || []
+                                    ).map((token) => ({
+                                      value: String(token.id),
+                                      label: token.key
+                                        ? `${token.name} · ${token.key}`
+                                        : token.name,
+                                    }))
                                     return (
                                       <FormItem>
                                         <FormLabel>
-                                          {t('Select Key')}
+                                          {t('Select User API Key')}
                                         </FormLabel>
                                         <Select
-                                          items={keyItems}
+                                          items={tokenItems}
                                           value={field.value || '0'}
-                                          onValueChange={(nextKey) => {
-                                            const promptByKey =
-                                              parseSystemPromptByKey(
+                                          onValueChange={(nextTokenId) => {
+                                            const promptByToken =
+                                              parseSystemPromptByToken(
                                                 form.getValues(
-                                                  'system_prompt_by_key'
+                                                  'system_prompt_by_token'
                                                 )
                                               )
-                                            const overwriteByKey =
+                                            const overwriteByToken =
                                               parseBooleanMap(
                                                 form.getValues(
-                                                  'system_prompt_overwrite_by_key'
+                                                  'system_prompt_overwrite_by_token'
                                                 )
                                               )
-                                            const prependByKey = parseBooleanMap(
+                                            const prependByToken = parseBooleanMap(
                                               form.getValues(
-                                                'system_prompt_prepend_by_key'
+                                                'system_prompt_prepend_by_token'
                                               )
                                             )
-                                            const previousKey =
+                                            const previousTokenId =
                                               field.value || '0'
                                             const previousPrompt =
                                               form.getValues(
-                                                'system_prompt_key_prompt'
+                                                'system_prompt_token_prompt'
                                               ) || ''
                                             if (previousPrompt.trim()) {
-                                              promptByKey[previousKey] =
+                                              promptByToken[previousTokenId] =
                                                 previousPrompt
                                             } else {
-                                              delete promptByKey[previousKey]
+                                              delete promptByToken[previousTokenId]
                                             }
-                                            overwriteByKey[previousKey] =
+                                            overwriteByToken[previousTokenId] =
                                               form.getValues(
-                                                'system_prompt_key_overwrite'
+                                                'system_prompt_token_overwrite'
                                               ) === true
-                                            prependByKey[previousKey] =
+                                            prependByToken[previousTokenId] =
                                               form.getValues(
-                                                'system_prompt_key_prepend'
+                                                'system_prompt_token_prepend'
                                               ) === true
                                             form.setValue(
-                                              'system_prompt_by_key',
-                                              Object.keys(promptByKey).length > 0
-                                                ? JSON.stringify(promptByKey)
+                                              'system_prompt_by_token',
+                                              Object.keys(promptByToken).length > 0
+                                                ? JSON.stringify(promptByToken)
                                                 : '',
                                               { shouldDirty: true }
                                             )
                                             form.setValue(
-                                              'system_prompt_overwrite_by_key',
-                                              JSON.stringify(overwriteByKey),
+                                              'system_prompt_overwrite_by_token',
+                                              JSON.stringify(overwriteByToken),
                                               { shouldDirty: true }
                                             )
                                             form.setValue(
-                                              'system_prompt_prepend_by_key',
-                                              JSON.stringify(prependByKey),
+                                              'system_prompt_prepend_by_token',
+                                              JSON.stringify(prependByToken),
                                               { shouldDirty: true }
                                             )
-                                            field.onChange(nextKey)
+                                            field.onChange(nextTokenId)
                                             form.setValue(
-                                              'system_prompt_key_prompt',
-                                              promptByKey[nextKey] || ''
+                                              'system_prompt_token_prompt',
+                                              promptByToken[nextTokenId] || ''
                                             )
                                             form.setValue(
-                                              'system_prompt_key_overwrite',
-                                              overwriteByKey[nextKey] === true
+                                              'system_prompt_token_overwrite',
+                                              typeof overwriteByToken[
+                                                nextTokenId
+                                              ] === 'boolean'
+                                                ? overwriteByToken[nextTokenId]
+                                                : form.getValues(
+                                                    'system_prompt_overwrite'
+                                                  ) === true
                                             )
                                             form.setValue(
-                                              'system_prompt_key_prepend',
-                                              prependByKey[nextKey] === true
+                                              'system_prompt_token_prepend',
+                                              typeof prependByToken[
+                                                nextTokenId
+                                              ] === 'boolean'
+                                                ? prependByToken[nextTokenId]
+                                                : form.getValues(
+                                                    'system_prompt_prepend'
+                                                  ) === true
                                             )
                                           }}
                                         >
@@ -4510,7 +4554,7 @@ export function ChannelMutateDrawer({
                                             alignItemWithTrigger={false}
                                           >
                                             <SelectGroup>
-                                              {keyItems.map((item) => (
+                                              {tokenItems.map((item) => (
                                                 <SelectItem
                                                   key={item.value}
                                                   value={item.value}
@@ -4523,7 +4567,7 @@ export function ChannelMutateDrawer({
                                         </Select>
                                         <FormDescription>
                                           {t(
-                                            'Select a Key from this multi-key channel.'
+                                            'Select a user-created API Key by name.'
                                           )}
                                         </FormDescription>
                                         <FormMessage />
@@ -4534,41 +4578,41 @@ export function ChannelMutateDrawer({
 
                                 <FormField
                                   control={form.control}
-                                  name='system_prompt_key_prompt'
+                                  name='system_prompt_token_prompt'
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel>
-                                        {t('Key-specific System Prompt')}
+                                        {t('API Key-specific System Prompt')}
                                       </FormLabel>
                                       <FormControl>
                                         <Textarea
                                           placeholder={t(
-                                            'Enter the system prompt for the selected Key'
+                                            'Enter the system prompt for the selected API Key'
                                           )}
                                           rows={3}
                                           {...field}
                                           onChange={(event) => {
                                             const value = event.target.value
                                             field.onChange(value)
-                                            const selectedKey =
+                                            const selectedTokenId =
                                               form.getValues(
-                                                'system_prompt_key'
+                                                'system_prompt_token'
                                               ) || '0'
-                                            const promptByKey =
-                                              parseSystemPromptByKey(
+                                            const promptByToken =
+                                              parseSystemPromptByToken(
                                                 form.getValues(
-                                                  'system_prompt_by_key'
+                                                  'system_prompt_by_token'
                                                 )
                                               )
                                             if (value.trim()) {
-                                              promptByKey[selectedKey] = value
+                                              promptByToken[selectedTokenId] = value
                                             } else {
-                                              delete promptByKey[selectedKey]
+                                              delete promptByToken[selectedTokenId]
                                             }
                                             form.setValue(
-                                              'system_prompt_by_key',
-                                              Object.keys(promptByKey).length > 0
-                                                ? JSON.stringify(promptByKey)
+                                              'system_prompt_by_token',
+                                              Object.keys(promptByToken).length > 0
+                                                ? JSON.stringify(promptByToken)
                                                 : '',
                                               { shouldDirty: true }
                                             )
@@ -4577,7 +4621,7 @@ export function ChannelMutateDrawer({
                                       </FormControl>
                                       <FormDescription>
                                         {t(
-                                          'This prompt is used only when the selected Key handles the request; otherwise the default channel prompt is used.'
+                                          'This prompt is used only when the selected API Key handles the request; otherwise the default channel prompt is used.'
                                         )}
                                       </FormDescription>
                                       <FormMessage />
@@ -4586,16 +4630,16 @@ export function ChannelMutateDrawer({
                                 />
                                 <FormField
                                   control={form.control}
-                                  name='system_prompt_key_overwrite'
+                                  name='system_prompt_token_overwrite'
                                   render={({ field }) => (
                                     <FormItem className='flex items-center justify-between'>
                                       <div className='space-y-0.5'>
                                         <FormLabel>
-                                          {t('Overwrite for Selected Key')}
+                                          {t('Overwrite for Selected API Key')}
                                         </FormLabel>
                                         <FormDescription>
                                           {t(
-                                            'Replace the user system prompt only for the selected Key.'
+                                            'Replace the user system prompt only for the selected API Key.'
                                           )}
                                         </FormDescription>
                                       </div>
@@ -4604,20 +4648,20 @@ export function ChannelMutateDrawer({
                                           checked={field.value === true}
                                           onCheckedChange={(value) => {
                                             field.onChange(value)
-                                            const selectedKey =
+                                            const selectedTokenId =
                                               form.getValues(
-                                                'system_prompt_key'
+                                                'system_prompt_token'
                                               ) || '0'
-                                            const overwriteByKey =
+                                            const overwriteByToken =
                                               parseBooleanMap(
                                                 form.getValues(
-                                                  'system_prompt_overwrite_by_key'
+                                                  'system_prompt_overwrite_by_token'
                                                 )
                                               )
-                                            overwriteByKey[selectedKey] = value
+                                            overwriteByToken[selectedTokenId] = value
                                             form.setValue(
-                                              'system_prompt_overwrite_by_key',
-                                              JSON.stringify(overwriteByKey),
+                                              'system_prompt_overwrite_by_token',
+                                              JSON.stringify(overwriteByToken),
                                               { shouldDirty: true }
                                             )
                                           }}
@@ -4629,16 +4673,16 @@ export function ChannelMutateDrawer({
 
                                 <FormField
                                   control={form.control}
-                                  name='system_prompt_key_prepend'
+                                  name='system_prompt_token_prepend'
                                   render={({ field }) => (
                                     <FormItem className='flex items-center justify-between'>
                                       <div className='space-y-0.5'>
                                         <FormLabel>
-                                          {t('Prepend for Selected Key')}
+                                          {t('Prepend for Selected API Key')}
                                         </FormLabel>
                                         <FormDescription>
                                           {t(
-                                            'Put the selected Key system prompt first in the message list.'
+                                            'Put the selected API Key system prompt first in the message list.'
                                           )}
                                         </FormDescription>
                                       </div>
@@ -4647,19 +4691,19 @@ export function ChannelMutateDrawer({
                                           checked={field.value === true}
                                           onCheckedChange={(value) => {
                                             field.onChange(value)
-                                            const selectedKey =
+                                            const selectedTokenId =
                                               form.getValues(
-                                                'system_prompt_key'
+                                                'system_prompt_token'
                                               ) || '0'
-                                            const prependByKey = parseBooleanMap(
+                                            const prependByToken = parseBooleanMap(
                                               form.getValues(
-                                                'system_prompt_prepend_by_key'
+                                                'system_prompt_prepend_by_token'
                                               )
                                             )
-                                            prependByKey[selectedKey] = value
+                                            prependByToken[selectedTokenId] = value
                                             form.setValue(
-                                              'system_prompt_prepend_by_key',
-                                              JSON.stringify(prependByKey),
+                                              'system_prompt_prepend_by_token',
+                                              JSON.stringify(prependByToken),
                                               { shouldDirty: true }
                                             )
                                           }}

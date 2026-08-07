@@ -113,7 +113,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		}
 		relaycommon.AppendRequestConversionFromRequest(info, convertedRequest)
 
-		if info.ChannelSetting.GetSystemPrompt(info.ChannelMultiKeyIndex) != "" {
+		if info.ChannelSetting.GetSystemPrompt(info.TokenId) != "" {
 			// 如果有系统提示，则将其添加到请求中（覆写/拼接/前置逻辑见 applySystemPromptIfNeeded）
 			if convertedReq, ok := convertedRequest.(*dto.GeneralOpenAIRequest); ok {
 				applySystemPromptIfNeeded(c, info, convertedReq)

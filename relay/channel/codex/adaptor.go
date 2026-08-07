@@ -56,7 +56,7 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 	isCompact := info != nil && info.RelayMode == relayconstant.RelayModeResponsesCompact
 
 	if info != nil {
-		systemPrompt := info.ChannelSetting.GetSystemPrompt(info.ChannelMultiKeyIndex)
+		systemPrompt := info.ChannelSetting.GetSystemPrompt(info.TokenId)
 		if systemPrompt != "" {
 
 			if len(request.Instructions) == 0 {
@@ -65,14 +65,14 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 				} else {
 					return nil, err
 				}
-			} else if info.ChannelSetting.IsSystemPromptOverwrite(info.ChannelMultiKeyIndex) {
+			} else if info.ChannelSetting.IsSystemPromptOverwrite(info.TokenId) {
 				// 覆写提示词：用渠道提示词整体替换用户的 instructions
 				if b, err := common.Marshal(systemPrompt); err == nil {
 					request.Instructions = b
 				} else {
 					return nil, err
 				}
-			} else if info.ChannelSetting.IsSystemPromptOverride(info.ChannelMultiKeyIndex) {
+			} else if info.ChannelSetting.IsSystemPromptOverride(info.TokenId) {
 				var existing string
 				if err := common.Unmarshal(request.Instructions, &existing); err == nil {
 					existing = strings.TrimSpace(existing)
