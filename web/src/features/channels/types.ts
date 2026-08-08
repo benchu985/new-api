@@ -241,6 +241,14 @@ export type MultiKeyConfirmAction = {
   keyIndex?: number
 }
 
+export interface MultiKeyTestResult {
+  keyIndex: number
+  status: 'idle' | 'testing' | 'success' | 'error'
+  responseTime?: number
+  error?: string
+  errorCode?: string
+}
+
 export interface MultiKeyStatusResponse {
   success: boolean
   message?: string
