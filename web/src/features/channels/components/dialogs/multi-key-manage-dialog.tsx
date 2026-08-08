@@ -107,6 +107,10 @@ export function MultiKeyManageDialog({
     Map<number, MultiKeyTestResult>
   >(new Map())
   const [isTestingAll, setIsTestingAll] = useState(false)
+  const failedTestKeyIndexes = Array.from(testResults.values())
+    .filter((result) => result.status === 'error')
+    .map((result) => result.keyIndex)
+    .sort((a, b) => a - b)
 
   // Reset test results when dialog opens
   useEffect(() => {
@@ -188,7 +192,52 @@ export function MultiKeyManageDialog({
 
     setIsPerformingAction(true)
     try {
-      const { type, keyIndex } = confirmAction
+      const { type, keyIndex, keyIndexes } = confirmAction
+
+      if (type === 'disable-failed') {
+        const indexes = Array.from(new Set(keyIndexes || []))
+        const disabledIndexes: number[] = []
+        let failedCount = 0
+
+        for (const index of indexes) {
+          try {
+            const result = await disableMultiKey(currentRow.id, index)
+            if (result.success) {
+              disabledIndexes.push(index)
+            } else {
+              failedCount++
+            }
+          } catch {
+            failedCount++
+          }
+        }
+
+        if (disabledIndexes.length > 0) {
+          setTestResults((prev) => {
+            const next = new Map(prev)
+            disabledIndexes.forEach((index) => next.delete(index))
+            return next
+          })
+          toast.success(
+            t('{{count}} failed key(s) disabled', {
+              count: disabledIndexes.length,
+            })
+          )
+          queryClient.invalidateQueries({
+            queryKey: channelsQueryKeys.lists(),
+          })
+          await loadKeyStatus(currentPage, pageSize)
+        }
+        if (failedCount > 0) {
+          toast.error(
+            t('{{count}} key(s) could not be disabled', {
+              count: failedCount,
+            })
+          )
+        }
+        return
+      }
+
       let response
 
       // Execute the appropriate action
@@ -209,6 +258,21 @@ export function MultiKeyManageDialog({
       if (response?.success) {
         toast.success(response.message || t('Operation successful'))
         queryClient.invalidateQueries({ queryKey: channelsQueryKeys.lists() })
+
+        if (type === 'disable' && keyIndex !== undefined) {
+          setTestResults((prev) => {
+            const next = new Map(prev)
+            next.delete(keyIndex)
+            return next
+          })
+        }
+        if (
+          type === 'delete' ||
+          type === 'delete-disabled' ||
+          type === 'disable-all'
+        ) {
+          setTestResults(new Map())
+        }
 
         // Reload data - reset to page 1 for bulk actions
         const isBulkAction = type.includes('all') || type === 'delete-disabled'
@@ -300,6 +364,7 @@ export function MultiKeyManageDialog({
 
   const handleTestAllKeys = useCallback(async () => {
     if (!currentRow || keys.length === 0) return
+    setTestResults(new Map())
     setIsTestingAll(true)
     toast.info(t('Testing all keys...'))
     for (const key of keys) {
@@ -402,7 +467,7 @@ export function MultiKeyManageDialog({
           <Separator className='shrink-0' />
 
           {/* Toolbar */}
-          <div className='flex shrink-0 items-center justify-between'>
+          <div className='flex shrink-0 flex-wrap items-center justify-between gap-2'>
             <Select
               items={[
                 ...MULTI_KEY_FILTER_OPTIONS.map((option) => ({
@@ -427,7 +492,7 @@ export function MultiKeyManageDialog({
               </SelectContent>
             </Select>
 
-            <div className='flex items-center gap-2'>
+            <div className='flex flex-wrap items-center justify-end gap-2'>
               <Button
                 variant='outline'
                 size='sm'
@@ -450,6 +515,25 @@ export function MultiKeyManageDialog({
                 )}
                 {t('Test All Keys')}
               </Button>
+
+              {failedTestKeyIndexes.length > 0 && (
+                <Button
+                  variant='destructive'
+                  size='sm'
+                  onClick={() =>
+                    setConfirmAction({
+                      type: 'disable-failed',
+                      keyIndexes: failedTestKeyIndexes,
+                    })
+                  }
+                  disabled={isTestingAll || isPerformingAction}
+                >
+                  <PowerOff className='mr-2 h-4 w-4' />
+                  {t('Disable Failed ({{count}})', {
+                    count: failedTestKeyIndexes.length,
+                  })}
+                </Button>
+              )}
 
               {manualDisabledCount + autoDisabledCount > 0 && (
                 <Button

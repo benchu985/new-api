@@ -237,8 +237,10 @@ export type MultiKeyConfirmAction = {
     | 'delete'
     | 'enable-all'
     | 'disable-all'
+    | 'disable-failed'
     | 'delete-disabled'
   keyIndex?: number
+  keyIndexes?: number[]
 }
 
 export interface MultiKeyTestResult {
