@@ -3276,8 +3276,7 @@ export function ChannelMutateDrawer({
                                 />
                               )}
 
-                              {!isEditing &&
-                                multiKeyMode === 'multi_to_single' && (
+                              {multiKeyMode === 'multi_to_single' && (
                                   <FormField
                                     control={form.control}
                                     name='multi_key_type'
@@ -3295,6 +3294,10 @@ export function ChannelMutateDrawer({
                                             {
                                               value: 'polling',
                                               label: t('Polling'),
+                                            },
+                                            {
+                                              value: 'fixed',
+                                              label: t('Fixed'),
                                             },
                                           ]}
                                           onValueChange={field.onChange}
@@ -3315,21 +3318,29 @@ export function ChannelMutateDrawer({
                                               <SelectItem value='polling'>
                                                 {t('Polling')}
                                               </SelectItem>
+                                              <SelectItem value='fixed'>
+                                                {t('Fixed')}
+                                              </SelectItem>
                                             </SelectGroup>
                                           </SelectContent>
                                         </Select>
                                         <FormDescription>
-                                          {multiKeyType === 'polling' ? (
+                                          {multiKeyType === 'polling' && (
                                             <span className='text-warning'>
                                               {t(
                                                 'Polling mode requires Redis and memory cache, otherwise performance will be significantly degraded'
                                               )}
                                             </span>
-                                          ) : (
+                                          )}
+                                          {multiKeyType === 'fixed' &&
+                                            t(
+                                              'Always use the first enabled key; on failed retries it advances to the next key'
+                                            )}
+                                          {(multiKeyType === 'random' ||
+                                            !multiKeyType) &&
                                             t(
                                               'Randomly select a key from the pool for each request'
-                                            )
-                                          )}
+                                            )}
                                         </FormDescription>
                                         <FormMessage />
                                       </FormItem>

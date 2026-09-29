@@ -246,7 +246,7 @@ export const channelFormSchema = z
     other: z.string().optional(),
     // Multi-key options (not sent to backend directly)
     multi_key_mode: z.enum(['single', 'batch', 'multi_to_single']).optional(),
-    multi_key_type: z.enum(['random', 'polling']).optional(),
+    multi_key_type: z.enum(['random', 'polling', 'fixed']).optional(),
     batch_add_set_key_prefix_2_name: z.boolean().optional(),
     key_mode: z.enum(['append', 'replace']).optional(), // For editing multi-key channels
     // Channel extra settings (stored in setting JSON, not sent directly)
@@ -661,7 +661,9 @@ export function transformChannelToFormDefaults(
     header_override: channel.header_override || '',
     settings: channel.settings || '{}',
     other: channel.other || '',
-    multi_key_mode: 'single',
+    multi_key_mode: channel.channel_info.is_multi_key
+      ? 'multi_to_single'
+      : 'single',
     multi_key_type: channel.channel_info.multi_key_mode || 'random',
     batch_add_set_key_prefix_2_name: false,
     key_mode: 'append', // Default to append mode for editing multi-key channels
@@ -870,7 +872,7 @@ function normalizeBaseUrl(value: string | undefined): string {
  */
 export function transformFormDataToCreatePayload(formData: ChannelFormValues): {
   mode: 'single' | 'batch' | 'multi_to_single'
-  multi_key_mode?: 'random' | 'polling'
+  multi_key_mode?: 'random' | 'polling' | 'fixed'
   batch_add_set_key_prefix_2_name?: boolean
   channel: Partial<Channel>
 } {

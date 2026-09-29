@@ -196,7 +196,11 @@ func (channel *Channel) GetKeys() []string {
 	return keys
 }
 
-func (channel *Channel) GetNextEnabledKey() (string, int, *types.NewAPIError) {
+// GetNextEnabledKey selects the key used by the next request on this channel.
+// retryKeyOffset is the number of failed attempts on this channel within the
+// current request; only MultiKeyModeFixed consumes it to advance past failed
+// keys, other modes ignore it.
+func (channel *Channel) GetNextEnabledKey(retryKeyOffset int) (string, int, *types.NewAPIError) {
 	// If not in multi-key mode, return the original key string directly.
 	if !channel.ChannelInfo.IsMultiKey {
 		return channel.Key, 0, nil
@@ -276,6 +280,19 @@ func (channel *Channel) GetNextEnabledKey() (string, int, *types.NewAPIError) {
 		}
 		// Fallback – should not happen, but return first enabled key
 		return keys[enabledIdx[0]], enabledIdx[0], nil
+	case constant.MultiKeyModeFixed:
+		// 固定：每次请求固定使用最前面的可用密钥；同一请求内密钥失败后依次向后推，
+		// 推进次数由最大重试次数决定（retryKeyOffset <= common.RetryTimes）。
+		// 配合自动禁用：失败的密钥可被 handlerMultiKeyUpdate 单独禁用，
+		// 后续请求自然从下一个可用密钥开始。
+		if retryKeyOffset < 0 {
+			retryKeyOffset = 0
+		}
+		if retryKeyOffset >= len(enabledIdx) {
+			retryKeyOffset = len(enabledIdx) - 1
+		}
+		selectedIdx := enabledIdx[retryKeyOffset]
+		return keys[selectedIdx], selectedIdx, nil
 	default:
 		// Unknown mode, default to first enabled key (or original key string)
 		return keys[enabledIdx[0]], enabledIdx[0], nil

@@ -425,11 +425,17 @@ export function MultiKeyManageDialog({
             />
             {currentRow.channel_info?.multi_key_mode && (
               <StatusBadge
-                label={
-                  currentRow.channel_info.multi_key_mode === 'random'
-                    ? t('Random')
-                    : t('Polling')
-                }
+                label={(() => {
+                  const modeLabel: Record<string, string> = {
+                    random: 'Random',
+                    polling: 'Polling',
+                    fixed: 'Fixed',
+                  }
+                  return t(
+                    modeLabel[currentRow.channel_info.multi_key_mode] ??
+                      'Polling'
+                  )
+                })()}
                 variant='neutral'
                 copyable={false}
               />

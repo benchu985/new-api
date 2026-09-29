@@ -104,16 +104,22 @@ export function useChannelMutateForm(props: UseChannelMutateFormParams) {
             delete payload[field]
           }
         }
+        // 固定/随机/轮询策略：编辑多密钥渠道时可切换，无需敏感权限
+        const payloadWithStrategy =
+          props.isMultiKeyChannel && data.multi_key_type
+            ? { ...payload, multi_key_mode: data.multi_key_type }
+            : payload
+
         const payloadWithKeyMode =
           canEditSensitive &&
           props.isMultiKeyChannel &&
           data.key?.trim() &&
           data.key_mode
             ? {
-                ...payload,
+                ...payloadWithStrategy,
                 key_mode: data.key_mode,
               }
-            : payload
+            : payloadWithStrategy
 
         const response = await updateChannel(
           props.currentRow.id,

@@ -321,7 +321,13 @@ func getChannel(c *gin.Context, info *relaycommon.RelayInfo, retryParam *service
 
 	info.PriceData.GroupRatioInfo = helper.HandleGroupRatio(c, info)
 
-	newAPIError := middleware.SetupContextForSelectedChannel(c, channel, info.OriginModelName)
+	// 固定模式：重试仍选中同一渠道时，密钥选择按重试次数依次向后推
+	retryKeyOffset := 0
+	if channel.Id == common.GetContextKeyInt(c, constant.ContextKeyChannelId) {
+		retryKeyOffset = retryParam.GetRetry()
+	}
+
+	newAPIError := middleware.SetupContextForSelectedChannel(c, channel, info.OriginModelName, retryKeyOffset)
 	if newAPIError != nil {
 		return nil, newAPIError
 	}
@@ -527,7 +533,7 @@ func RelayTask(c *gin.Context) {
 		if lockedCh, ok := relayInfo.LockedChannel.(*model.Channel); ok && lockedCh != nil {
 			channel = lockedCh
 			if retryParam.GetRetry() > 0 {
-				if setupErr := middleware.SetupContextForSelectedChannel(c, channel, relayInfo.OriginModelName); setupErr != nil {
+				if setupErr := middleware.SetupContextForSelectedChannel(c, channel, relayInfo.OriginModelName, retryParam.GetRetry()); setupErr != nil {
 					taskErr = service.TaskErrorWrapperLocal(setupErr.Err, "setup_locked_channel_failed", http.StatusInternalServerError)
 					break
 				}
