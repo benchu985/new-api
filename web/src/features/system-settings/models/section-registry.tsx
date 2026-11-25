@@ -46,6 +46,8 @@ const MODELS_SECTIONS = [
           global: {
             pass_through_request_enabled:
               settings['global.pass_through_request_enabled'],
+            hide_upstream_info_enabled:
+              settings['global.hide_upstream_info_enabled'],
             thinking_model_blacklist: formatJsonForEditor(
               settings['global.thinking_model_blacklist'],
               '[]'

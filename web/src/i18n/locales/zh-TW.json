@@ -1594,6 +1594,8 @@
     "Enable Performance Monitoring": "啟用效能監控",
     "Enable rate limiting": "啟用速率限制",
     "Enable Request Passthrough": "啟用請求透傳",
+    "Hide Upstream Info": "隱藏上游資訊",
+    "Strip the real upstream from responses: rewrite model back to the requested name, remove system_fingerprint, provider-specific fields, upstream headers and upstream error details.": "回應中不洩露真實上游：模型名改回請求時的名稱，移除 system_fingerprint、渠道特有欄位、上游回應頭與上游錯誤細節。",
     "Enable selected channels": "啟用選定的渠道",
     "Enable selected models": "啟用選定的模型",
     "Enable SSL/TLS": "啟用 SSL/TLS",

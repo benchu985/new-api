@@ -1598,6 +1598,8 @@
     "Enable Performance Monitoring": "Enable Performance Monitoring",
     "Enable rate limiting": "Enable rate limiting",
     "Enable Request Passthrough": "Enable Request Passthrough",
+    "Hide Upstream Info": "Hide Upstream Info",
+    "Strip the real upstream from responses: rewrite model back to the requested name, remove system_fingerprint, provider-specific fields, upstream headers and upstream error details.": "Strip the real upstream from responses: rewrite model back to the requested name, remove system_fingerprint, provider-specific fields, upstream headers and upstream error details.",
     "Enable selected channels": "Enable selected channels",
     "Enable selected models": "Enable selected models",
     "Enable SSL/TLS": "Enable SSL/TLS",

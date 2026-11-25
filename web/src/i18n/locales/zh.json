@@ -1598,6 +1598,8 @@
     "Enable Performance Monitoring": "启用性能监控",
     "Enable rate limiting": "启用速率限制",
     "Enable Request Passthrough": "启用请求透传",
+    "Hide Upstream Info": "隐藏上游信息",
+    "Strip the real upstream from responses: rewrite model back to the requested name, remove system_fingerprint, provider-specific fields, upstream headers and upstream error details.": "响应中不泄露真实上游：模型名改回请求时的名称，移除 system_fingerprint、渠道特有字段、上游响应头与上游错误详情。",
     "Enable selected channels": "启用选定的渠道",
     "Enable selected models": "启用选定的模型",
     "Enable SSL/TLS": "启用 SSL/TLS",

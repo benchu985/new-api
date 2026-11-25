@@ -28,6 +28,8 @@ func CloseResponseBodyGracefully(httpResponse *http.Response) {
 // (managed separately) and X-Oneapi-Request-Id (to preserve the local instance
 // ID). When the upstream header is X-Oneapi-Request-Id, the value is captured
 // into the Gin context for later logging.
+// When HideUpstreamInfoEnabled is on, only a minimal allowlist of functional
+// headers passes through; everything else could reveal the real provider.
 func ShouldCopyUpstreamHeader(c *gin.Context, k string, v []string) bool {
 	if strings.EqualFold(k, "Content-Length") {
 		return false
@@ -35,6 +37,13 @@ func ShouldCopyUpstreamHeader(c *gin.Context, k string, v []string) bool {
 	if strings.EqualFold(k, common.RequestIdKey) {
 		if c != nil && len(v) > 0 {
 			c.Set(common.UpstreamRequestIdKey, v[0])
+		}
+		return false
+	}
+	if HideUpstreamInfoEnabled() {
+		switch strings.ToLower(k) {
+		case "content-type", "content-disposition", "content-language":
+			return true
 		}
 		return false
 	}
@@ -46,6 +55,8 @@ func IOCopyBytesGracefully(c *gin.Context, src *http.Response, data []byte) {
 		return
 	}
 
+	// strip upstream identity from the response body when enabled
+	data = SanitizeUpstreamBody(c, data)
 	body := io.NopCloser(bytes.NewBuffer(data))
 
 	// We shouldn't set the header before we parse the response body, because the parse part may fail.

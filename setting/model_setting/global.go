@@ -34,6 +34,7 @@ func (p ChatCompletionsToResponsesPolicy) IsChannelEnabled(channelID int, channe
 
 type GlobalSettings struct {
 	PassThroughRequestEnabled        bool                             `json:"pass_through_request_enabled"`
+	HideUpstreamInfoEnabled          bool                             `json:"hide_upstream_info_enabled"`
 	ThinkingModelBlacklist           []string                         `json:"thinking_model_blacklist"`
 	ChatCompletionsToResponsesPolicy ChatCompletionsToResponsesPolicy `json:"chat_completions_to_responses_policy"`
 }
@@ -41,6 +42,7 @@ type GlobalSettings struct {
 // 默认配置
 var defaultOpenaiSettings = GlobalSettings{
 	PassThroughRequestEnabled: false,
+	HideUpstreamInfoEnabled:   false,
 	ThinkingModelBlacklist: []string{
 		"moonshotai/kimi-k2-thinking",
 		"kimi-k2-thinking",

@@ -112,6 +112,9 @@ func init() {
 }
 
 func channelOwnerName(channelType int) string {
+	if service.HideUpstreamInfoEnabled() {
+		return "system"
+	}
 	apiType, success := common.ChannelType2APIType(channelType)
 	if !success {
 		return strings.ToLower(constant.GetChannelTypeName(channelType))
